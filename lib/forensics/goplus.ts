@@ -98,7 +98,7 @@ export function extractGoPlusForensics(
       .map((dex: { dex_name?: string; name?: string; pair?: string; liquidity?: string | number }) => ({
         dexName: dex.dex_name || dex.name,
         pairAddress: dex.pair,
-        liquidityUsd: dex.liquidity ? parseFloat(dex.liquidity) / 1e6 : undefined,
+        liquidityUsd: dex.liquidity ? parseFloat(String(dex.liquidity)) / 1e6 : undefined,
       }));
     dexPools.topPools = sortedPools;
   }
