@@ -1,5 +1,5 @@
 import { createHash } from "crypto";
-import type { RawProviderResult, ScanInput } from "../types";
+import type { RawProviderResult } from "../types";
 
 /**
  * Generate SHA-256 hash of payload

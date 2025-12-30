@@ -5,7 +5,7 @@ import { hashBundle, signBundle } from "../../../lib/sign";
 import { evaluatePolicy } from "../../../lib/policy";
 import { detectProxy } from "../../../lib/firstparty/proxy";
 import { extractGoPlusForensics } from "../../../lib/forensics/goplus";
-import type { ScanResponse, ScanInput, RawMetadata, Attestation } from "../../../lib/types";
+import type { ScanResponse, ScanInput, RawMetadata, Attestation, RawProviderResult, NormalizedProviderEvidence } from "../../../lib/types";
 import { SUPPORTED_CHAINS } from "../../../lib/types";
 
 // Token address validation regex
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         }))
         .catch((error) => {
           // Create error result - ensure it never crashes
-          const errorRaw: any = {
+          const errorRaw: RawProviderResult = {
             providerId: provider.id,
             providerName: provider.name,
             fetchedAt: new Date().toISOString(),
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
     );
 
   const results = await Promise.allSettled(providerPromises);
-  const successful: Array<{ raw: any; normalized: any }> = [];
+  const successful: Array<{ raw: RawProviderResult; normalized: NormalizedProviderEvidence }> = [];
   const failed: string[] = [];
 
   results.forEach((result, index) => {

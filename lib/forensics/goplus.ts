@@ -1,4 +1,5 @@
 import type { GoPlusForensics, RawProviderResult } from "../types";
+import { asInteger, asFloat } from "../utils/parse";
 
 /**
  * Extract GoPlus forensics data from raw provider result
@@ -11,7 +12,30 @@ export function extractGoPlusForensics(
     return null;
   }
 
-  const payload = raw.raw as any;
+  // GoPlus API response structure (partial, we only access what we need)
+  interface GoPlusResponse {
+    code: number;
+    result?: Record<string, GoPlusTokenData>;
+  }
+  interface GoPlusTokenData {
+    token_name?: string;
+    token_symbol?: string;
+    decimals?: string | number;
+    total_supply?: string | number;
+    holder_count?: string | number;
+    holders?: Array<{ address?: string; balance?: string | number; percent?: string | number }>;
+    top10_holder_percent?: string | number;
+    creator_address?: string;
+    creator_balance?: string | number;
+    creator_percent?: string | number;
+    owner_address?: string;
+    owner_balance?: string | number;
+    owner_percent?: string | number;
+    dex?: Array<{ dex_name?: string; name?: string; pair?: string; liquidity?: string | number }>;
+    lp_holders?: Array<{ address?: string; percent?: string | number; is_locked?: number | string; lock_info?: string; lock_time?: string }>;
+    lp_holder_count?: string | number;
+  }
+  const payload = raw.raw as GoPlusResponse;
   if (payload.code !== 1 || !payload.result) {
     return null;
   }
@@ -27,9 +51,9 @@ export function extractGoPlusForensics(
     address: tokenAddress,
     name: tokenData.token_name,
     symbol: tokenData.token_symbol,
-    decimals: tokenData.decimals ? parseInt(tokenData.decimals) : undefined,
+    decimals: asInteger(tokenData.decimals),
     totalSupply: tokenData.total_supply,
-    holderCount: tokenData.holder_count ? parseInt(tokenData.holder_count) : undefined,
+    holderCount: asInteger(tokenData.holder_count),
   };
 
   // Extract holders
@@ -42,7 +66,7 @@ export function extractGoPlusForensics(
     const top10 = tokenData.holders.slice(0, 10).map((h: { address?: string; balance?: string | number; percent?: string | number }) => ({
       address: h.address || "",
       balance: h.balance,
-      percent: h.percent ? parseFloat(String(h.percent)) : undefined,
+      percent: asFloat(h.percent),
     }));
     holders.topHolders = top10;
 
@@ -50,8 +74,11 @@ export function extractGoPlusForensics(
     const top10PercentSum = top10.reduce((sum: number, h: { address: string; balance?: string | number; percent?: number }) => sum + (h.percent || 0), 0);
     if (top10PercentSum > 0) {
       holders.top10Percent = top10PercentSum;
-    } else if (tokenData.top10_holder_percent) {
-      holders.top10Percent = parseFloat(tokenData.top10_holder_percent);
+    } else {
+      const top10Percent = asFloat(tokenData.top10_holder_percent);
+      if (top10Percent !== undefined) {
+        holders.top10Percent = top10Percent;
+      }
     }
   }
 
@@ -62,8 +89,9 @@ export function extractGoPlusForensics(
     if (tokenData.creator_balance) {
       creatorOwner.creatorBalance = tokenData.creator_balance;
     }
-    if (tokenData.creator_percent) {
-      creatorOwner.creatorPercent = parseFloat(tokenData.creator_percent);
+    const creatorPercent = asFloat(tokenData.creator_percent);
+    if (creatorPercent !== undefined) {
+      creatorOwner.creatorPercent = creatorPercent;
     }
   }
   if (tokenData.owner_address) {
@@ -71,8 +99,9 @@ export function extractGoPlusForensics(
     if (tokenData.owner_balance) {
       creatorOwner.ownerBalance = tokenData.owner_balance;
     }
-    if (tokenData.owner_percent) {
-      creatorOwner.ownerPercent = parseFloat(tokenData.owner_percent);
+    const ownerPercent = asFloat(tokenData.owner_percent);
+    if (ownerPercent !== undefined) {
+      creatorOwner.ownerPercent = ownerPercent;
     }
   }
 
@@ -83,7 +112,7 @@ export function extractGoPlusForensics(
   if (tokenData.dex && Array.isArray(tokenData.dex)) {
     // Calculate total liquidity (in USD, GoPlus returns in wei-like units, divide by 1e6 for millions)
     const totalLiquidity = tokenData.dex.reduce((sum: number, dex: { liquidity?: string | number }) => {
-      return sum + parseFloat(String(dex.liquidity || "0"));
+      return sum + (asFloat(dex.liquidity) || 0);
     }, 0);
     if (totalLiquidity > 0) {
       dexPools.totalLiquidityUsd = totalLiquidity / 1e6; // Convert to millions
@@ -93,12 +122,12 @@ export function extractGoPlusForensics(
     // Sort by liquidity and take top 5
     const sortedPools = [...tokenData.dex]
       .sort((a: { liquidity?: string | number }, b: { liquidity?: string | number }) => 
-        parseFloat(String(b.liquidity || "0")) - parseFloat(String(a.liquidity || "0")))
+        (asFloat(b.liquidity) || 0) - (asFloat(a.liquidity) || 0))
       .slice(0, 5)
       .map((dex: { dex_name?: string; name?: string; pair?: string; liquidity?: string | number }) => ({
         dexName: dex.dex_name || dex.name,
         pairAddress: dex.pair,
-        liquidityUsd: dex.liquidity ? parseFloat(String(dex.liquidity)) / 1e6 : undefined,
+        liquidityUsd: asFloat(dex.liquidity) ? (asFloat(dex.liquidity)! / 1e6) : undefined,
       }));
     dexPools.topPools = sortedPools;
   }
@@ -118,7 +147,7 @@ export function extractGoPlusForensics(
     const top10LpHolders = tokenData.lp_holders
       .slice(0, 10)
       .map((lp: { address?: string; percent?: string | number; is_locked?: number | string; lock_info?: string; lock_time?: string }) => {
-        const percent = lp.percent ? parseFloat(lp.percent) : 0;
+        const percent = asFloat(lp.percent) || 0;
         totalLpPercent += percent;
         if (lp.is_locked === 1 || lp.is_locked === "1") {
           lockedLpPercent += percent;
@@ -146,7 +175,10 @@ export function extractGoPlusForensics(
       }
     }
   } else if (tokenData.lp_holder_count) {
-    lpLocks.lpHolderCount = parseInt(tokenData.lp_holder_count);
+    const lpHolderCount = asInteger(tokenData.lp_holder_count);
+    if (lpHolderCount !== undefined) {
+      lpLocks.lpHolderCount = lpHolderCount;
+    }
   }
 
   return {

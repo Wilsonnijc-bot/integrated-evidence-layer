@@ -77,7 +77,7 @@ export type PolicyMode = "strict" | "degen";
 export type PolicyDecision = {
   mode: PolicyMode;
   decision: "allow" | "warn" | "block";
-  reasons: EvidenceItem[];
+  reasons: AggregatedEvidenceItem[];
 };
 
 // Attestation (bundle signing)

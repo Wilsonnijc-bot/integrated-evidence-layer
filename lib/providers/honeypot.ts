@@ -1,9 +1,12 @@
 import type { ProviderAdapter, RawProviderResult, NormalizedProviderEvidence, ScanInput, EvidenceItem } from "../types";
 import { createRawResult, createErrorResult, withTimeout, getChainId, SUPPORTED_CHAINS } from "./base";
+import { asInteger } from "../utils/parse";
 
 // Address validation - try to use ethers if available, otherwise use basic validation
 let getAddress: (address: string) => string;
 try {
+  // Dynamic import to avoid require() - ethers is optional
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const ethers = require("ethers");
   getAddress = ethers.getAddress;
 } catch {
@@ -25,7 +28,7 @@ const HONEYPOT_API_BASE = "https://api.honeypot.is";
 export const honeypotAdapter: ProviderAdapter = {
   id: "honeypot",
   name: "Honeypot.is",
-  supports: (chain: string) => SUPPORTED_CHAINS.includes(chain as any),
+  supports: (chain: string) => (SUPPORTED_CHAINS as readonly string[]).includes(chain),
   
   fetchRaw: async (input: ScanInput): Promise<RawProviderResult> => {
     const now = new Date().toISOString();
@@ -41,7 +44,7 @@ export const honeypotAdapter: ProviderAdapter = {
     // #endregion
 
     // 1) Validate and normalize address
-    let addressOriginal = input.tokenAddress.trim();
+    const addressOriginal = input.tokenAddress.trim();
     let addressChecksummed: string;
     let addressLowercased: string;
     
@@ -70,7 +73,7 @@ export const honeypotAdapter: ProviderAdapter = {
     }
 
     // 2) Get chain ID
-    const chainId = parseInt(getChainId(input.chain), 10);
+    const chainId = asInteger(getChainId(input.chain)) || 1;
 
     // 3) Build correct URL
     const url = new URL(`${HONEYPOT_API_BASE}/v2/IsHoneypot`);
@@ -233,15 +236,35 @@ export const honeypotAdapter: ProviderAdapter = {
     }
   },
 
-  normalize: (raw: RawProviderResult, input: ScanInput): NormalizedProviderEvidence => {
+  normalize: (raw: RawProviderResult): NormalizedProviderEvidence => {
     const evidence: EvidenceItem[] = [];
     const flags: string[] = [];
 
     // Always return valid evidence, even on failure
     // Check for errors, non-200 status, or invalid JSON
+    interface HoneypotErrorPayload {
+      error?: string;
+      rawText?: string;
+      [key: string]: unknown;
+    }
+    interface HoneypotResponse {
+      honeypotResult?: {
+        isHoneypot?: boolean;
+      };
+      simulationResult?: {
+        buyTax?: number;
+        sellTax?: number;
+      };
+      contractCode?: {
+        isProxy?: boolean;
+      };
+      error?: string;
+      rawText?: string;
+      [key: string]: unknown;
+    }
     const isError = raw.error || raw.httpStatus !== 200 || !raw.raw;
-    const payload = raw.raw as any;
-    const isInvalidPayload = payload && (payload.error || payload.rawText);
+    const payload = raw.raw as HoneypotErrorPayload | HoneypotResponse | null;
+    const isInvalidPayload = payload && (payload.error || (payload as HoneypotErrorPayload).rawText);
     
     if (isError || isInvalidPayload) {
       // Don't add PROVIDER_UNAVAILABLE to evidence - it goes to coverage section
@@ -265,11 +288,12 @@ export const honeypotAdapter: ProviderAdapter = {
 
     // Payload is valid at this point - parse Honeypot.is v2 API response
     // Expected structure: { honeypotResult: { isHoneypot }, simulationResult: { buyTax, sellTax }, contractCode: { isProxy } }
+    const validPayload = payload as HoneypotResponse;
     
-    const isHoneypot = Boolean(payload?.honeypotResult?.isHoneypot === true);
-    const buyTax = Number(payload?.simulationResult?.buyTax ?? 0);
-    const sellTax = Number(payload?.simulationResult?.sellTax ?? 0);
-    const isProxy = Boolean(payload?.contractCode?.isProxy);
+    const isHoneypot = Boolean(validPayload?.honeypotResult?.isHoneypot === true);
+    const buyTax = Number(validPayload?.simulationResult?.buyTax ?? 0);
+    const sellTax = Number(validPayload?.simulationResult?.sellTax ?? 0);
+    const isProxy = Boolean(validPayload?.contractCode?.isProxy);
 
     // Contract Risk - Only emit HONEYPOT_DETECTED if actually a honeypot
     if (isHoneypot) {

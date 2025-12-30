@@ -12,9 +12,10 @@ function createStubAdapter(
   return {
     id,
     name,
-    supports: (chain: string) => SUPPORTED_CHAINS.includes(chain as any),
+    supports: (chain: string) => (SUPPORTED_CHAINS as readonly string[]).includes(chain),
     
-    fetchRaw: async (input: ScanInput): Promise<RawProviderResult> => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    fetchRaw: async (_input: ScanInput): Promise<RawProviderResult> => {
       const apiKey = process.env[envKey];
       
       if (!apiKey) {

@@ -1,12 +1,13 @@
 import type { ProviderAdapter, RawProviderResult, NormalizedProviderEvidence, ScanInput, EvidenceItem } from "../types";
 import { createRawResult, createErrorResult, withTimeout, getChainId, SUPPORTED_CHAINS } from "./base";
+import { asInteger, asFloat } from "../utils/parse";
 
 const PROVIDER_TIMEOUT_MS = 6000;
 
 export const goplusAdapter: ProviderAdapter = {
   id: "goplus",
   name: "GoPlus",
-  supports: (chain: string) => SUPPORTED_CHAINS.includes(chain as any),
+  supports: (chain: string) => (SUPPORTED_CHAINS as readonly string[]).includes(chain),
   
   fetchRaw: async (input: ScanInput): Promise<RawProviderResult> => {
     const chainId = getChainId(input.chain);
@@ -71,7 +72,32 @@ export const goplusAdapter: ProviderAdapter = {
       };
     }
 
-    const payload = raw.raw as any;
+    // GoPlus API response structure (partial)
+    interface GoPlusTokenData {
+      buy_tax?: string | number;
+      sell_tax?: string | number;
+      transfer_tax?: string | number;
+      is_honeypot?: string;
+      cannot_sell_all?: string;
+      is_proxy?: string;
+      is_blacklisted?: string;
+      is_mintable?: string;
+      holder_count?: string | number;
+      creator_address?: string;
+      honeypot_with_same_creator?: string;
+      is_in_cex?: {
+        listed?: string;
+        cex_list?: Array<{ name?: string }>;
+      };
+      dex?: Array<{ liquidity?: string | number }>;
+      lp_holders?: Array<{ is_locked?: number | string }>;
+      [key: string]: unknown;
+    }
+    interface GoPlusResponse {
+      code: number;
+      result?: Record<string, GoPlusTokenData>;
+    }
+    const payload = raw.raw as GoPlusResponse;
     if (payload.code !== 1 || !payload.result) {
       return {
         providerId: "goplus",
@@ -156,9 +182,10 @@ export const goplusAdapter: ProviderAdapter = {
       flags.push("Mintable token");
     }
 
-    const buyTax = parseFloat(tokenData.buy_tax || "0");
-    const sellTax = parseFloat(tokenData.sell_tax || "0");
-    const transferTax = parseFloat(tokenData.transfer_tax || "0");
+    const buyTax = asFloat(tokenData.buy_tax) || 0;
+    const sellTax = asFloat(tokenData.sell_tax) || 0;
+    // transferTax is available but not currently used in evidence
+    // const transferTax = asFloat(tokenData.transfer_tax) || 0;
 
     if (buyTax > 0) {
       const severity = buyTax > 50 ? "high" : buyTax > 10 ? "medium" : "low";
@@ -208,7 +235,7 @@ export const goplusAdapter: ProviderAdapter = {
     // Liquidity Evidence
     if (tokenData.dex && Array.isArray(tokenData.dex) && tokenData.dex.length > 0) {
       const totalLiquidity = tokenData.dex.reduce((sum: number, dex: { liquidity?: string | number }) => {
-        return sum + parseFloat(String(dex.liquidity || "0"));
+        return sum + (asFloat(dex.liquidity) || 0);
       }, 0);
 
       if (totalLiquidity > 0) {
@@ -269,7 +296,7 @@ export const goplusAdapter: ProviderAdapter = {
         category: "behavioralSignals",
         key: "HOLDER_COUNT",
         severity: "info",
-        title: `${parseInt(tokenData.holder_count).toLocaleString()} token holders`,
+        title: `${(asInteger(tokenData.holder_count) || 0).toLocaleString()} token holders`,
       });
     }
 
@@ -278,7 +305,7 @@ export const goplusAdapter: ProviderAdapter = {
         category: "behavioralSignals",
         key: "CEX_LISTED",
         severity: "info",
-        title: `Listed on CEX: ${tokenData.is_in_cex.cex_list?.join(", ") || "Unknown"}`,
+        title: `Listed on CEX: ${tokenData.is_in_cex?.cex_list?.map(c => c.name || "").filter(Boolean).join(", ") || "Unknown"}`,
       });
     }
 

@@ -1,4 +1,5 @@
 import type { AggregatedEvidenceItem, PolicyDecision, PolicyMode, NormalizedProviderEvidence } from "./types";
+import { asFloat } from "./utils/parse";
 
 /**
  * Policy engine - evaluates evidence and makes decisions
@@ -110,7 +111,7 @@ export function evaluatePolicy(
       if (e.key === "HIGH_SELL_TAX" || e.key === "HIGH_BUY_TAX") {
         // Extract tax value from title or value
         const taxValue = e.value ? Number(e.value) : 
-          parseFloat(e.title.replace(/[^0-9.]/g, "")) || 0;
+          asFloat(e.title.replace(/[^0-9.]/g, "")) || 0;
         return taxValue > 30;
       }
       return false;

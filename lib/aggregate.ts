@@ -1,4 +1,5 @@
-import type { EvidenceItem, NormalizedProviderEvidence, ProviderSummary, EvidenceBundle, AggregatedEvidenceItem } from "./types";
+import type { NormalizedProviderEvidence, ProviderSummary, EvidenceBundle, AggregatedEvidenceItem } from "./types";
+import { asFloat } from "./utils/parse";
 
 /**
  * Aggregate evidence items by key (dedupe, max severity, merge sources)
@@ -133,10 +134,9 @@ export function generateBundle(
   contractRisk.push(`   Sell Tax: ${sellTax?.title.replace("Sell tax: ", "") || "0"}%`);
   
   if (buyTax || sellTax) {
-    const maxTax = Math.max(
-      parseFloat(buyTax?.title.replace("Buy tax: ", "").replace("%", "") || "0"),
-      parseFloat(sellTax?.title.replace("Sell tax: ", "").replace("%", "") || "0"),
-    );
+      const buyTaxValue = buyTax?.title ? asFloat(buyTax.title.replace("Buy tax: ", "").replace("%", "")) || 0 : 0;
+      const sellTaxValue = sellTax?.title ? asFloat(sellTax.title.replace("Sell tax: ", "").replace("%", "")) || 0 : 0;
+      const maxTax = Math.max(buyTaxValue, sellTaxValue);
     if (maxTax > 50) {
       contractRisk.push("⚠️ Warning: Tax rates above 50% may prevent trading.");
     } else if (maxTax > 10) {

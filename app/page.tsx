@@ -1,116 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-
-type ProviderEvidence = {
-  providerId: string;
-  providerName: string;
-  verdict: "low" | "medium" | "high";
-  summary: string;
-  flags: string[];
-  timestamp: string;
-  available: boolean;
-};
-
-type EvidenceBundle = {
-  tokenAddress: string;
-  chain: string;
-  contractRisk: string[];
-  liquidityEvidence: string[];
-  deployerReputation: string[];
-  behavioralSignals: string[];
-  providers: ProviderEvidence[];
-};
-
-type AggregatedEvidenceItem = {
-  category: "contractRisk" | "liquidityEvidence" | "deployerReputation" | "behavioralSignals";
-  key: string;
-  severity: "info" | "low" | "medium" | "high";
-  title: string;
-  detail?: string;
-  value?: string | number;
-  sources: Array<{ providerId: string; rawSha256: string; observedAt: string }>;
-};
-
-type PolicyDecision = {
-  mode: "strict" | "degen";
-  decision: "allow" | "warn" | "block";
-  reasons: AggregatedEvidenceItem[];
-};
-
-type GoPlusForensics = {
-  token: {
-    address: string;
-    name?: string;
-    symbol?: string;
-    decimals?: number;
-    totalSupply?: string | number;
-    holderCount?: number;
-  };
-  holders: {
-    top10Percent?: number;
-    topHolders: Array<{
-      address: string;
-      balance?: string | number;
-      percent?: number;
-    }>;
-  };
-  creatorOwner: {
-    creatorAddress?: string;
-    creatorBalance?: string | number;
-    creatorPercent?: number;
-    ownerAddress?: string;
-    ownerBalance?: string | number;
-    ownerPercent?: number;
-  };
-  dexPools: {
-    totalLiquidityUsd?: number;
-    poolCount?: number;
-    topPools: Array<{
-      dexName?: string;
-      pairAddress?: string;
-      liquidityUsd?: number;
-    }>;
-  };
-  lpLocks: {
-    lpHolderCount?: number;
-    lockedRatio?: number;
-    topLpHolders: Array<{
-      address: string;
-      percent?: number;
-      isLocked?: boolean;
-      lockInfo?: string;
-    }>;
-  };
-};
-
-type ScanResponse = {
-  bundle: EvidenceBundle;
-  evidence?: AggregatedEvidenceItem[];
-  raw?: Array<{
-    providerId: string;
-    providerName: string;
-    fetchedAt: string;
-    httpStatus: number;
-    rawSha256: string;
-  }>;
-  policy?: PolicyDecision;
-  attestation?: {
-    bundleSha256: string;
-    signature: string;
-    publicKeyId: string;
-    signedAt: string;
-  };
-  forensics?: {
-    goplus?: GoPlusForensics;
-  };
-  metadata?: {
-    schemaVersion?: string;
-    fetchedAt: string;
-    providersAttempted?: string[];
-    providersSucceeded?: string[];
-  };
-};
+import type {
+  EvidenceBundle,
+  AggregatedEvidenceItem,
+  PolicyDecision,
+  ScanResponse,
+} from "../lib/types";
 
 export default function Home() {
   const [tokenAddress, setTokenAddress] = useState("");
