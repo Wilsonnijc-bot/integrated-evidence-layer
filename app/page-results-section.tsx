@@ -1,3 +1,5 @@
+"use client";
+
 // This file contains the reordered results section
 // Order: Policy → Coverage → Consensus → Categories → Providers → Attestation
 
@@ -6,7 +8,7 @@ import type {
   EvidenceBundle,
   AggregatedEvidenceItem,
   ScanResponse,
-} from "../lib/types";
+} from "@/lib/types";
 
 export const ResultsSection = ({
   policy,
