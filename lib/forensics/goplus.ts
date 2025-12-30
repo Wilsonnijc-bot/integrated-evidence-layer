@@ -39,10 +39,10 @@ export function extractGoPlusForensics(
 
   if (tokenData.holders && Array.isArray(tokenData.holders)) {
     // Take top 10 holders
-    const top10 = tokenData.holders.slice(0, 10).map((h: any) => ({
+    const top10 = tokenData.holders.slice(0, 10).map((h: { address?: string; balance?: string | number; percent?: string | number }) => ({
       address: h.address || "",
       balance: h.balance,
-      percent: h.percent ? parseFloat(h.percent) : undefined,
+      percent: h.percent ? parseFloat(String(h.percent)) : undefined,
     }));
     holders.topHolders = top10;
 
@@ -82,8 +82,8 @@ export function extractGoPlusForensics(
   };
   if (tokenData.dex && Array.isArray(tokenData.dex)) {
     // Calculate total liquidity (in USD, GoPlus returns in wei-like units, divide by 1e6 for millions)
-    const totalLiquidity = tokenData.dex.reduce((sum: number, dex: any) => {
-      return sum + parseFloat(dex.liquidity || "0");
+    const totalLiquidity = tokenData.dex.reduce((sum: number, dex: { liquidity?: string | number }) => {
+      return sum + parseFloat(String(dex.liquidity || "0"));
     }, 0);
     if (totalLiquidity > 0) {
       dexPools.totalLiquidityUsd = totalLiquidity / 1e6; // Convert to millions
@@ -92,9 +92,10 @@ export function extractGoPlusForensics(
 
     // Sort by liquidity and take top 5
     const sortedPools = [...tokenData.dex]
-      .sort((a: any, b: any) => parseFloat(b.liquidity || "0") - parseFloat(a.liquidity || "0"))
+      .sort((a: { liquidity?: string | number }, b: { liquidity?: string | number }) => 
+        parseFloat(String(b.liquidity || "0")) - parseFloat(String(a.liquidity || "0")))
       .slice(0, 5)
-      .map((dex: any) => ({
+      .map((dex: { dex_name?: string; name?: string; pair?: string; liquidity?: string | number }) => ({
         dexName: dex.dex_name || dex.name,
         pairAddress: dex.pair,
         liquidityUsd: dex.liquidity ? parseFloat(dex.liquidity) / 1e6 : undefined,
@@ -116,7 +117,7 @@ export function extractGoPlusForensics(
 
     const top10LpHolders = tokenData.lp_holders
       .slice(0, 10)
-      .map((lp: any) => {
+      .map((lp: { address?: string; percent?: string | number; is_locked?: number | string; lock_info?: string; lock_time?: string }) => {
         const percent = lp.percent ? parseFloat(lp.percent) : 0;
         totalLpPercent += percent;
         if (lp.is_locked === 1 || lp.is_locked === "1") {
@@ -138,7 +139,7 @@ export function extractGoPlusForensics(
     } else {
       // Fallback: count locked vs total
       const lockedCount = tokenData.lp_holders.filter(
-        (lp: any) => lp.is_locked === 1 || lp.is_locked === "1",
+        (lp: { is_locked?: number | string }) => lp.is_locked === 1 || lp.is_locked === "1",
       ).length;
       if (tokenData.lp_holders.length > 0) {
         lpLocks.lockedRatio = (lockedCount / tokenData.lp_holders.length) * 100;

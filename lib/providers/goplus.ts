@@ -207,8 +207,8 @@ export const goplusAdapter: ProviderAdapter = {
 
     // Liquidity Evidence
     if (tokenData.dex && Array.isArray(tokenData.dex) && tokenData.dex.length > 0) {
-      const totalLiquidity = tokenData.dex.reduce((sum: number, dex: any) => {
-        return sum + parseFloat(dex.liquidity || "0");
+      const totalLiquidity = tokenData.dex.reduce((sum: number, dex: { liquidity?: string | number }) => {
+        return sum + parseFloat(String(dex.liquidity || "0"));
       }, 0);
 
       if (totalLiquidity > 0) {
@@ -221,7 +221,7 @@ export const goplusAdapter: ProviderAdapter = {
         });
       }
 
-      const lockedLP = tokenData.lp_holders?.filter((lp: any) => lp.is_locked === 1);
+      const lockedLP = tokenData.lp_holders?.filter((lp: { is_locked?: number | string }) => lp.is_locked === 1 || lp.is_locked === "1");
       if (lockedLP && lockedLP.length > 0) {
         evidence.push({
           category: "liquidityEvidence",
