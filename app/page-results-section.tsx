@@ -1,6 +1,13 @@
 // This file contains the reordered results section
 // Order: Policy → Coverage → Consensus → Categories → Providers → Attestation
 
+import type {
+  PolicyDecision,
+  EvidenceBundle,
+  AggregatedEvidenceItem,
+  ScanResponse,
+} from "../lib/types";
+
 export const ResultsSection = ({
   policy,
   bundle,
