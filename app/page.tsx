@@ -902,10 +902,10 @@ export default function Home() {
             <div className="grid gap-6 sm:grid-cols-2">
               <a
                 href="https://www.binance.com/en/academy/articles/what-is-a-rug-pull-in-crypto-and-how-does-it-work"
-                target="_blank"
-                rel="noopener noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
                 className="group relative flex flex-col gap-5 rounded-xl border-2 border-violet-500/40 bg-black/60 p-8 transition-all hover:border-violet-400/60 hover:bg-black/80 hover:shadow-lg hover:shadow-violet-500/20"
-              >
+          >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <span className="mb-3 inline-block rounded-full bg-violet-500/20 px-4 py-1.5 text-xs font-semibold uppercase tracking-wide text-violet-200">
@@ -940,11 +940,11 @@ export default function Home() {
                     binance.com
                   </span>
                 </div>
-              </a>
-              <a
+          </a>
+          <a
                 href="https://koinly.io/blog/crypto-rug-pulls-guide/"
-                target="_blank"
-                rel="noopener noreferrer"
+            target="_blank"
+            rel="noopener noreferrer"
                 className="group relative flex flex-col gap-5 rounded-xl border-2 border-violet-500/40 bg-black/60 p-8 transition-all hover:border-violet-400/60 hover:bg-black/80 hover:shadow-lg hover:shadow-violet-500/20"
               >
                 <div className="flex items-start justify-between">
@@ -981,8 +981,8 @@ export default function Home() {
                     koinly.io
                   </span>
                 </div>
-              </a>
-            </div>
+          </a>
+        </div>
           </div>
         </section>
 
