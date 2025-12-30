@@ -47,7 +47,7 @@ export function extractGoPlusForensics(
     holders.topHolders = top10;
 
     // Calculate top10Percent
-    const top10PercentSum = top10.reduce((sum: number, h) => sum + (h.percent || 0), 0);
+    const top10PercentSum = top10.reduce((sum: number, h: { address: string; balance?: string | number; percent?: number }) => sum + (h.percent || 0), 0);
     if (top10PercentSum > 0) {
       holders.top10Percent = top10PercentSum;
     } else if (tokenData.top10_holder_percent) {
